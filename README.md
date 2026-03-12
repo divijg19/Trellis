@@ -1,36 +1,49 @@
 # `Trellis`
 
-> A calm, concurrent task runtime built in Go.
+> A calm, concurrent task orchestration runtime built in Go.
 
-`Trellis` is a background task orchestration engine.
-It accepts tasks, schedules them, executes them concurrently through workers, retries failures, and tracks the full lifecycle of each task with clarity and reliability.
+`Trellis` is a lightweight runtime for executing, scheduling, and observing background jobs.
 
----
+It provides a minimal but powerful environment for:
 
-## 🌿 What Is `Trellis`?
+* task execution
+* worker pools
+* queue management
+* job scheduling
+* runtime monitoring
+* structured observability
 
-`Trellis` is a concurrent task lifecycle manager.
+`Trellis` focuses on **clear runtime primitives**, **predictable concurrency**, and **operational visibility**.
 
-It is designed to:
-
-* Accept background jobs via API
-* Queue and schedule work
-* Execute tasks concurrently
-* Retry failures with policy
-* Persist state across restarts
-* Provide observability into task execution
-
-`Trellis` is not just a queue.
-It is not just a worker pool.
-It is the system that coordinates both.
+It is designed as a **minimal orchestration engine**, not a heavy framework.
 
 ---
 
-## 🧠 Core Concept
+# 🌿 What Is `Trellis`?
+
+`Trellis` is a **task lifecycle runtime**.
+
+It accepts background jobs, queues them, executes them concurrently through workers, and tracks their lifecycle with explicit state transitions.
+
+`Trellis` coordinates:
+
+* task execution
+* scheduling
+* worker pools
+* queue management
+* runtime observability
+
+It is **not just a queue** and **not just a worker pool**.
+
+It is the system that **orchestrates both**.
+
+---
+
+# 🧠 Core Concept
 
 At its heart, `Trellis` manages **state and execution**.
 
-Every task moves through a lifecycle:
+Every task moves through a controlled lifecycle:
 
 ```
 pending → queued → running → completed
@@ -38,154 +51,470 @@ pending → queued → running → completed
                   retrying → failed → dead
 ```
 
-`Trellis` ensures transitions are controlled, observable, and durable.
+The runtime ensures transitions are:
+
+* explicit
+* observable
+* deterministic
+
+This lifecycle model allows `Trellis` to manage execution reliability and system visibility.
 
 ---
 
-## 🏗 Architecture Overview
+# 🏗 Architecture Overview
 
-`Trellis` is structured in clear layers:
+`Trellis` is structured into clear runtime layers.
 
 ```
-domain      → Task definitions and lifecycle rules
-runtime     → Orchestration engine
-queue       → Task transport
-worker      → Concurrent execution
-storage     → Persistence layer
-api         → HTTP interface
-web         → UI (GoTH + Jaspr)
+HTTP API
+   ↓
+Scheduler
+   ↓
+Queue
+   ↓
+Worker Pool
+   ↓
+Task Execution
+   ↓
+Observability (logs / metrics / traces)
 ```
 
-This separation keeps `Trellis` predictable and maintainable.
+A Web UI sits alongside the API to inspect runtime state and task activity.
+
+Each layer has a single responsibility, which keeps the system predictable and maintainable.
 
 ---
 
-## ✨ Why `Trellis` Exists
+# ✨ Why `Trellis` Exists
 
-Modern applications require reliable background processing:
+Modern applications depend heavily on background processing:
 
-* Email sending
-* Report generation
-* Image processing
-* External API calls
-* AI pipelines
-* Long-running computations
+* sending emails
+* generating reports
+* refreshing caches
+* running ML inference
+* performing health checks
+* processing long-running tasks
 
-Blocking request/response cycles is inefficient and fragile.
+Running this work inside request/response cycles causes:
 
-`Trellis` moves that work into a structured background runtime.
+* slow APIs
+* fragile execution
+* poor observability
+
+`Trellis` moves this work into a **dedicated orchestration runtime** where tasks are executed safely and observed clearly.
 
 ---
 
-## 🚀 Design Principles
+# 🚀 Design Principles
 
-`Trellis` follows a few core principles:
+`Trellis` follows a few guiding principles.
 
-* Calm concurrency
-* Explicit state transitions
-* Minimal magic
-* Clear failure handling
-* Graceful shutdown
-* Observability first
-* Clean architecture boundaries
+### Calm Concurrency
+
+Concurrency should be understandable and predictable.
+
+### Explicit State
+
+Task lifecycle transitions must be controlled and validated.
+
+### Minimal Infrastructure
+
+Prefer the Go standard library and avoid unnecessary frameworks.
+
+### Observability First
+
+Systems should be observable while running.
+
+### Clean Boundaries
+
+Each subsystem has a clear responsibility.
 
 `Trellis` favors clarity over cleverness.
 
 ---
 
-## 🔄 Task Lifecycle
+# ⚙️ Runtime Components
 
-Each task in `Trellis` contains:
+## Task
 
-* Identifier
-* Type
-* Payload
-* Status
-* Retry metadata
-* Timestamps
-* Error information
-* Optional result
+A **task** represents a unit of background work.
 
-State transitions are explicit and validated.
+Examples include:
 
-Retries follow a defined policy (e.g., exponential backoff).
+* HTTP health checks
+* sending email
+* generating reports
+* refreshing cached data
+* executing ML inference
 
----
+Each task contains:
 
-## ⚙️ Concurrency Model
+* ID
+* type
+* payload
+* status
+* timestamps
+* optional result
+* optional error
 
-`Trellis` uses:
-
-* Goroutines for workers
-* Channels for queue transport
-* Context propagation for cancellation
-* Configurable worker concurrency
-
-Workers execute handlers registered by task type.
+Tasks are executed by workers and tracked through their lifecycle.
 
 ---
 
-## 🗄 Persistence
+## Queue
 
-`Trellis` persists tasks to durable storage.
+The queue stores tasks waiting to be executed.
 
-On restart, `Trellis`:
+Responsibilities include:
 
-* Recovers unfinished tasks
-* Requeues eligible work
-* Maintains consistency
+* enqueue tasks
+* dequeue tasks
+* support concurrent workers
 
-Durability is a core feature, not an afterthought.
+The initial implementation uses an **in-memory queue**.
 
----
-
-## 📊 Observability
-
-`Trellis` exposes:
-
-* Task states
-* Retry counts
-* Worker status
-* Metrics endpoint
-* Structured logs
-
-Systems should be understandable while running.
-
----
-
-## 🛠 CLI (Initial)
+Future queue backends may include:
 
 ```
-trellis server
-trellis worker --concurrency 5
+Redis
+PostgreSQL
+distributed queues
 ```
 
-`Trellis` is designed to support single-process and distributed worker modes.
+---
+
+## Worker Pool
+
+Workers execute tasks concurrently.
+
+Workers:
+
+* pull tasks from the queue
+* execute task handlers
+* update task state
+* emit logs and metrics
+
+Workers rely on:
+
+* goroutines
+* channels
+* context cancellation
+
+Worker concurrency is configurable.
 
 ---
 
-## 🧪 Project Status
+## Scheduler
 
-`Trellis` is under active development.
+The scheduler creates tasks at defined intervals.
 
-Initial focus:
+Examples include:
 
-1. Domain model
-2. In-memory runtime
-3. Worker pool
-4. HTTP API
-5. Persistence
-6. Scheduler
-7. Observability
-8. UI (GoTH + Jaspr)
+```
+every 30 seconds
+every minute
+cron schedules
+```
+
+The scheduler generates tasks and places them into the queue.
+
+Typical scheduled workloads include:
+
+* health checks
+* maintenance jobs
+* data refresh tasks
 
 ---
 
-## 🎯 Long-Term Vision
+## Task Handlers
 
-`Trellis` aims to be:
+Each task type defines a handler responsible for performing the work.
 
-* A minimal yet powerful background runtime
-* A learning platform for concurrency mastery
-* A production-ready orchestration core
-* A foundational system within a broader ecosystem
+Conceptually:
+
+```
+Execute(ctx context.Context, payload any) error
+```
+
+Handlers should:
+
+* respect context cancellation
+* emit structured logs
+* record metrics
+
+This approach keeps the runtime **generic and extensible**.
+
+---
+
+# 🔍 Observability
+
+Observability is a **first-class feature** of `Trellis`.
+
+Tasks are observable by default, allowing operators to understand what the system is doing while it runs.
+
+---
+
+## Structured Logging
+
+Logging uses:
+
+```
+slog
+```
+
+Logs include contextual fields such as:
+
+```
+task_id
+task_type
+status
+duration
+error
+```
+
+---
+
+## Metrics
+
+Metrics are exposed through:
+
+```
+/metrics
+```
+
+Using Prometheus.
+
+Example metrics include:
+
+```
+tasks_total
+tasks_failed_total
+task_duration_seconds
+queue_depth
+worker_active
+```
+
+---
+
+## Tracing
+
+Tracing can be implemented with:
+
+```
+OpenTelemetry
+```
+
+Tracing allows visibility into:
+
+* task execution
+* scheduler events
+* queue operations
+* HTTP requests
+
+---
+
+# 🌐 HTTP API
+
+`Trellis` exposes a minimal HTTP API for interacting with tasks and runtime state.
+
+Example endpoints:
+
+```
+POST   /tasks
+GET    /tasks
+GET    /tasks/{id}
+DELETE /tasks/{id}
+
+GET    /health
+GET    /metrics
+```
+
+These endpoints allow clients to:
+
+* create tasks
+* inspect task state
+* monitor runtime health
+
+---
+
+# 🖥 Web UI
+
+`Trellis` includes a Web UI for inspecting the runtime.
+
+The interface provides visibility into:
+
+* active tasks
+* task history
+* queue depth
+* worker activity
+* runtime health
+
+The UI is implemented using:
+
+```
+GoTH
+HTMX
+Jaspr components
+```
+
+The Web UI interacts with the same API used by external clients.
+
+---
+
+# 🧩 Monitoring as Tasks
+
+Monitoring workloads are implemented as **task types**, not as a separate subsystem.
+
+Example:
+
+```
+task type: http_check
+```
+
+This task:
+
+* performs an HTTP request
+* records latency
+* records response status
+* emits metrics
+
+This design keeps `Trellis` **generic and extensible**, allowing monitoring to be treated as just another workload.
+
+---
+
+# 📁 Project Structure
+
+```
+trellis/
+
+cmd/
+    trellis-server/
+
+internal/
+
+    runtime/
+        executor.go
+        task.go
+
+    queue/
+        queue.go
+
+    worker/
+        worker.go
+        pool.go
+
+    scheduler/
+        scheduler.go
+
+    tasks/
+        httpcheck/
+            task.go
+            handler.go
+
+    http/
+        router.go
+        handlers.go
+        middleware.go
+
+    logging/
+        logger.go
+
+    observability/
+        metrics.go
+        tracing.go
+
+web/
+    templates/
+    components/
+
+pkg/
+    response/
+```
+
+---
+
+# 🔄 Execution Flow
+
+A typical execution flow in `Trellis` looks like:
+
+```
+scheduler
+   ↓
+enqueue task
+   ↓
+queue
+   ↓
+worker
+   ↓
+task handler
+   ↓
+logs / metrics / traces
+```
+
+This flow ensures tasks are executed asynchronously while remaining observable.
+
+---
+
+# 🧪 Project Status
+
+`Trellis` is currently under active development.
+
+The current runtime includes:
+
+* task lifecycle management
+* in-memory task storage
+* FIFO task queue
+* concurrent worker pool
+* handler registry
+* HTTP API for task submission and inspection
+
+Future milestones include:
+
+* durable persistence
+* task scheduling
+* observability instrumentation
+* Web UI for runtime inspection
+
+---
+
+# 🎯 Project Goals
+
+`Trellis` aims to:
+
+1. implement a clean orchestration runtime
+2. provide strong observability
+3. maintain minimal complexity
+4. serve as a reference Go backend architecture
+
+The initial runtime is expected to remain small:
+
+```
+~1500–2000 LOC
+```
+
+---
+
+# 🚫 Non-Goals (for now)
+
+The following are **not part of the initial scope**:
+
+```
+distributed cluster mode
+alerting systems
+workflow DAG engines
+multi-node scheduling
+```
+
+These may be explored in later versions.
+
+---
+
+# 🌱 Vision
+
+The long-term vision of `Trellis` is to become:
+
+* a minimal yet powerful background job runtime
+* a reference architecture for Go concurrency systems
+* a clean orchestration layer for modern applications
+* a learning platform for building reliable backend systems
