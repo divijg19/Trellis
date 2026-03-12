@@ -1,11 +1,3 @@
-Below is a **refined, unified README** that preserves your **original tone and structure**, incorporates the **Pulse observability direction**, and corrects **scope vs future features**.
-
-It keeps the **calm, architectural voice**, avoids marketing fluff, and maintains **consistent terminology** for a systems project.
-
-You can **replace the entire README.md with this**.
-
----
-
 # `Trellis`
 
 > A calm, concurrent task orchestration runtime built in Go.
